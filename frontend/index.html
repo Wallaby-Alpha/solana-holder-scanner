@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Micro-Cap Holder Accumulation & Predictive Alpha Engine</title>
+    <meta name="description" content="Quantitative research scanner tracking persistent holder accumulation and behavioral shifts on Solana micro-caps to test predictive forward alpha.">
+    
+    <!-- Modern Typography: Google Fonts Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for smooth responsive interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-layout">
+        <!-- Top Navigation Bar -->
+        <header class="app-header" id="main-header">
+            <div class="header-left">
+                <div class="brand-logo" id="brand-logo">
+                    <span class="logo-icon">◎</span>
+                    <div class="brand-text">
+                        <h1>SOLANA <span class="accent-text">ALPHA RESEARCH</span></h1>
+                        <span class="tagline">Persistent Holder Accumulation Engine</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <div class="horizon-selector" id="horizon-selector">
+                    <span class="selector-label">Horizon:</span>
+                    <button class="horizon-btn" data-horizon="1h" id="btn-horizon-1h">1h</button>
+                    <button class="horizon-btn" data-horizon="6h" id="btn-horizon-6h">6h</button>
+                    <button class="horizon-btn active" data-horizon="24h" id="btn-horizon-24h">24h</button>
+                    <button class="horizon-btn" data-horizon="3d" id="btn-horizon-3d">3d</button>
+                    <button class="horizon-btn" data-horizon="7d" id="btn-horizon-7d">7d</button>
+                    <button class="horizon-btn" data-horizon="14d" id="btn-horizon-14d">14d</button>
+                    <button class="horizon-btn" data-horizon="30d" id="btn-horizon-30d">30d</button>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="live-status-badge" id="live-status-indicator">
+                    <span class="pulse-dot"></span>
+                    <span class="status-label">Engine Active (Zero-Bias)</span>
+                </div>
+                <button class="btn btn-secondary" id="btn-open-config" title="Configure Research Thresholds">
+                    ⚙️ Settings & Rules
+                </button>
+                <button class="btn btn-primary" id="btn-refresh-scan" title="Run Incremental Scan">
+                    🔄 Rescan Network
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Navigation Tabs -->
+        <nav class="nav-tabs" id="primary-navigation">
+            <button class="nav-tab active" data-tab="tab-screener" id="nav-btn-screener">
+                📊 Micro-Cap Screener
+            </button>
+            <button class="nav-tab" data-tab="tab-deepdive" id="nav-btn-deepdive">
+                🔬 Token Holder Deep Dive
+            </button>
+            <button class="nav-tab" data-tab="tab-leaderboard" id="nav-btn-leaderboard">
+                🏆 Accumulator Leaderboard
+            </button>
+            <button class="nav-tab" data-tab="tab-backtest" id="nav-btn-backtest">
+                🧪 Quantitative Backtest Lab (Models A–F)
+            </button>
+            <button class="nav-tab" data-tab="tab-tracker" id="nav-btn-tracker">
+                📡 Live Ongoing Alpha Tracker
+            </button>
+        </nav>
+
+        <!-- Research Hypothesis Context Banner -->
+        <section class="research-hero-banner" id="hero-research-banner">
+            <div class="hypothesis-card" id="card-hypothesis">
+                <div class="card-badge">CENTRAL RESEARCH QUESTION</div>
+                <p class="hypothesis-quote">
+                    “When a Solana micro-cap token is declining or consolidating, does the fact that <strong>existing holders repeatedly increase their positions</strong>—especially across multiple independent, non-clustered wallets—predict subsequent price outperformance?”
+                </p>
+                <div class="hypothesis-meta">
+                    <span class="meta-item">⚡ Excludes LP, Burn & Deployers</span>
+                    <span class="meta-item">🔗 Sybil Cluster Correction Active</span>
+                    <span class="meta-item">🛡️ Frozen Historical States (Zero Look-Ahead)</span>
+                </div>
+            </div>
+
+            <!-- Top Level Live KPIs -->
+            <div class="kpi-grid" id="kpi-summary-grid">
+                <div class="kpi-card" id="kpi-tracked-tokens">
+                    <span class="kpi-title">Universe Screened</span>
+                    <span class="kpi-value" id="val-tracked-tokens">12</span>
+                    <span class="kpi-sub">Micro-caps ($25k–$25M)</span>
+                </div>
+                <div class="kpi-card highlight-bull" id="kpi-bullish-setups">
+                    <span class="kpi-title">Bullish Divergence Setups</span>
+                    <span class="kpi-value text-bull" id="val-bullish-setups">4</span>
+                    <span class="kpi-sub">Price down, Existing Accum Up</span>
+                </div>
+                <div class="kpi-card highlight-neutral" id="kpi-breakout-setups">
+                    <span class="kpi-title">Breakout Consolidations</span>
+                    <span class="kpi-value text-accent" id="val-breakout-setups">3</span>
+                    <span class="kpi-sub">Base forming, Repeat Buyers</span>
+                </div>
+                <div class="kpi-card" id="kpi-persistent-accumulators">
+                    <span class="kpi-title">Persistent Accumulators</span>
+                    <span class="kpi-value" id="val-persistent-accumulators">184</span>
+                    <span class="kpi-sub">Multiple buys, no selloff</span>
+                </div>
+                <div class="kpi-card highlight-warn" id="kpi-cluster-adjusted">
+                    <span class="kpi-title">Cluster-Adjusted Entities</span>
+                    <span class="kpi-value text-warn" id="val-cluster-entities">142</span>
+                    <span class="kpi-sub">77.2% Entity Independence</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content Views -->
+        <main class="main-content" id="main-content-area">
+
+            <!-- TAB 1: TOKEN SCREENER -->
+            <section class="tab-view active" id="tab-screener">
+                <div class="view-header">
+                    <div class="view-title-block">
+                        <h2>Solana Micro-Cap Screening Universe</h2>
+                        <p class="view-desc">Configurable on-chain screener filtering tokens with holder accumulation, absorption pressure, and divergence setups.</p>
+                    </div>
+                    <div class="filter-bar" id="screener-filter-bar">
+                        <div class="filter-group">
+                            <label for="filter-setup-select">Setup:</label>
+                            <select id="filter-setup-select" class="form-select">
+                                <option value="ALL">All Setups</option>
+                                <option value="BULLISH_DIVERGENCE_CANDIDATE">Bullish Divergence Candidates</option>
+                                <option value="BREAKOUT_CONSOLIDATION_CANDIDATE">Breakout Consolidation Candidates</option>
+                                <option value="DISTRIBUTION_CANDIDATE">Distribution Candidates</option>
+                                <option value="HIGH_CLUSTER_RISK">High Cluster / Sybil Risk</option>
+                                <option value="NEUTRAL">Neutral</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="search-token-input">Search:</label>
+                            <input type="text" id="search-token-input" class="form-input" placeholder="Symbol, Name, or Mint...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Screener Table Container -->
+                <div class="table-container" id="token-table-container">
+                    <table class="data-table" id="tokens-data-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="symbol" class="sortable">Token</th>
+                                <th data-sort="current_price_usd" class="sortable">Price</th>
+                                <th data-sort="price_change_24h" class="sortable">24h Chg</th>
+                                <th data-sort="market_cap_usd" class="sortable">Market Cap</th>
+                                <th data-sort="liquidity_usd" class="sortable">Liquidity</th>
+                                <th data-sort="volume_24h_usd" class="sortable">24h Vol</th>
+                                <th data-sort="holder_count" class="sortable">Holders</th>
+                                <th data-sort="top_10_percent" class="sortable">Top 10%</th>
+                                <th data-sort="existing_holder_net_accum_usd" class="sortable highlight-col">Existing-Holder Accum ($)</th>
+                                <th data-sort="existing_holder_accum_pct_supply" class="sortable">% Supply</th>
+                                <th data-sort="persistent_accumulators_count" class="sortable">Persistent Acc</th>
+                                <th data-sort="cluster_adjusted_accumulators_count" class="sortable">Cluster-Adj</th>
+                                <th data-sort="accumulation_distribution_pressure" class="sortable">Acc Pressure</th>
+                                <th data-sort="holder_accumulation_score" class="sortable">Alpha Score</th>
+                                <th data-sort="divergence_setup" class="sortable">Research Setup</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tokens-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 2: TOKEN DEEP DIVE -->
+            <section class="tab-view" id="tab-deepdive">
+                <div class="token-banner" id="deepdive-token-header">
+                    <div class="token-banner-left">
+                        <div class="token-title-row">
+                            <h2 id="deepdive-symbol">CHILLGUY</h2>
+                            <span class="token-name" id="deepdive-name">Just a Chill Guy</span>
+                            <span class="badge" id="deepdive-category">MEME</span>
+                            <span class="badge" id="deepdive-setup-badge">BULLISH DIVERGENCE</span>
+                        </div>
+                        <div class="token-mint-address" id="deepdive-mint-block">
+                            <span class="mint-label">Mint:</span>
+                            <code id="deepdive-mint">8PnGzB3QjE9K1mUrtV7GgPoxLz5V3Dq7Wb9YxLm4pump</code>
+                        </div>
+                    </div>
+                    <div class="token-banner-right" id="deepdive-metrics-strip">
+                        <div class="strip-metric">
+                            <span class="strip-label">Price</span>
+                            <span class="strip-val" id="strip-price">$0.001947</span>
+                        </div>
+                        <div class="strip-metric">
+                            <span class="strip-label">24h Chg</span>
+                            <span class="strip-val text-bear" id="strip-price-chg">-14.2%</span>
+                        </div>
+                        <div class="strip-metric">
+                            <span class="strip-label">Market Cap</span>
+                            <span class="strip-val" id="strip-mcap">$1.85M</span>
+                        </div>
+                        <div class="strip-metric">
+                            <span class="strip-label">Accum Score</span>
+                            <span class="strip-val text-bull" id="strip-score">82.4</span>
+                        </div>
+                        <div class="strip-metric">
+                            <span class="strip-label">Acc Pressure</span>
+                            <span class="strip-val text-bull" id="strip-pressure">3.4x</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deep Dive Multi-Chart Grid -->
+                <div class="deepdive-charts-grid">
+                    <!-- Price vs Accumulation Divergence Chart -->
+                    <div class="chart-panel" id="panel-chart-price-divergence">
+                        <div class="panel-header">
+                            <h3>Price & Accumulation Trajectory</h3>
+                            <span class="panel-subtitle">Hourly Price vs Accumulation Inflow</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-price-divergence"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Holder Accumulation Time Series -->
+                    <div class="chart-panel" id="panel-chart-holder-behavior">
+                        <div class="panel-header">
+                            <h3>Dynamic Holder Behavior Time Series</h3>
+                            <span class="panel-subtitle">Existing vs New Wallet Accumulation</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-holder-behavior"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Holder Cohort Retention Chart -->
+                    <div class="chart-panel" id="panel-chart-cohort-retention">
+                        <div class="panel-header">
+                            <h3>Holder Cohort Retention & Position Change</h3>
+                            <span class="panel-subtitle">Retention by First-Acquired Age bracket</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-cohort-retention"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Holder Concentration Curve -->
+                    <div class="chart-panel" id="panel-chart-concentration">
+                        <div class="panel-header">
+                            <h3>Holder Distribution & Concentration</h3>
+                            <span class="panel-subtitle">Top 5, 10, 20, 30 & Gini Coefficient</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-concentration"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wallets Drilldown: Top Accumulating & Distributing Wallets -->
+                <div class="deepdive-tables-grid">
+                    <!-- Top Persistent Accumulators -->
+                    <div class="sub-table-panel" id="panel-top-accumulators">
+                        <div class="panel-header">
+                            <h3>Top Accumulating Wallets</h3>
+                            <span class="panel-subtitle">Individual Wallets Ranked by Net Accumulation & Purchases</span>
+                        </div>
+                        <div class="table-container small-table">
+                            <table class="data-table" id="table-token-accumulators">
+                                <thead>
+                                    <tr>
+                                        <th>Wallet Address</th>
+                                        <th>Purchases</th>
+                                        <th>Sales</th>
+                                        <th>Net Inflow ($)</th>
+                                        <th>Current Balance ($)</th>
+                                        <th>Type</th>
+                                        <th>Cluster Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-token-accumulators"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Top Distributing Wallets -->
+                    <div class="sub-table-panel" id="panel-top-distributors">
+                        <div class="panel-header">
+                            <h3>Top Distributing Wallets</h3>
+                            <span class="panel-subtitle">Holders Selling or Exiting Positions</span>
+                        </div>
+                        <div class="table-container small-table">
+                            <table class="data-table" id="table-token-distributors">
+                                <thead>
+                                    <tr>
+                                        <th>Wallet Address</th>
+                                        <th>Sales Count</th>
+                                        <th>Net Outflow ($)</th>
+                                        <th>Reduction %</th>
+                                        <th>Full Exit?</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-token-distributors"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cluster Inspector Card -->
+                <div class="cluster-inspector-card" id="cluster-inspector-card">
+                    <div class="panel-header">
+                        <h3>Wallet Independence & Heuristic Clusters</h3>
+                        <span class="panel-subtitle">Common Funding Wallets & Sybil Entity Identification</span>
+                    </div>
+                    <div id="cluster-details-container" class="cluster-cards-grid">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: ACCUMULATOR LEADERBOARD -->
+            <section class="tab-view" id="tab-leaderboard">
+                <div class="view-header">
+                    <div class="view-title-block">
+                        <h2>Token Accumulator Leaderboard</h2>
+                        <p class="view-desc">Ranked leaderboard of wallets repeatedly accumulating positions. Toggle to filter out coordinated wallet clusters.</p>
+                    </div>
+                    <div class="filter-bar">
+                        <label class="toggle-control">
+                            <input type="checkbox" id="toggle-filter-clustered">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Filter Out Clustered / Sybil Wallets</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table" id="leaderboard-data-table">
+                        <thead>
+                            <tr>
+                                <th>Wallet Address</th>
+                                <th>Token</th>
+                                <th>Purchases</th>
+                                <th>Sales</th>
+                                <th>Net Accumulated ($)</th>
+                                <th>Current Holding ($)</th>
+                                <th>Persistence Status</th>
+                                <th>Existing Holder?</th>
+                                <th>Cluster Affiliation</th>
+                                <th>Inspect</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 4: QUANTITATIVE BACKTEST LAB (MODELS A-F) -->
+            <section class="tab-view" id="tab-backtest">
+                <div class="view-header">
+                    <div class="view-title-block">
+                        <h2>Hypothesis Validation Lab: Predictive Alpha & Negative Controls</h2>
+                        <p class="view-desc">Strict zero look-ahead bias backtesting comparing Holder Accumulation against conventional market baselines.</p>
+                    </div>
+                    <div class="filter-bar">
+                        <div class="filter-group">
+                            <label for="backtest-horizon-select">Forward Horizon:</label>
+                            <select id="backtest-horizon-select" class="form-select">
+                                <option value="fwd_ret_24h">Forward +24 Hours</option>
+                                <option value="fwd_ret_6h">Forward +6 Hours</option>
+                                <option value="fwd_ret_3d">Forward +3 Days</option>
+                                <option value="fwd_ret_7d">Forward +7 Days</option>
+                                <option value="fwd_ret_14d">Forward +14 Days</option>
+                                <option value="fwd_ret_30d">Forward +30 Days</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" id="btn-recompute-backtest">Recompute Test</button>
+                    </div>
+                </div>
+
+                <!-- Research Verdict Banner -->
+                <div class="verdict-banner" id="backtest-verdict-banner">
+                    <div class="verdict-icon">🔬</div>
+                    <div class="verdict-content">
+                        <h3 id="verdict-title">EVALUATING HYPOTHESIS ON SOLANA MICRO-CAPS</h3>
+                        <p id="verdict-text">Loading statistical evaluation...</p>
+                    </div>
+                </div>
+
+                <!-- Negative Controls Model Comparison Table -->
+                <div class="models-comparison-panel" id="panel-models-comparison">
+                    <div class="panel-header">
+                        <h3>Model Comparison Matrix (Models A through F)</h3>
+                        <span class="panel-subtitle">Is Holder Accumulation simply disguised momentum or does it provide independent predictive information?</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="models-table">
+                            <thead>
+                                <tr>
+                                    <th>Model Name</th>
+                                    <th>Feature Focus</th>
+                                    <th>Observations</th>
+                                    <th>Win Rate %</th>
+                                    <th>Mean Forward Return %</th>
+                                    <th>Median Return %</th>
+                                    <th>Sharpe Ratio</th>
+                                    <th>Outperformance vs Baseline</th>
+                                    <th>+25% Hit Prob</th>
+                                    <th>-25% Adverse Prob</th>
+                                    <th>Statistical Conclusion</th>
+                                </tr>
+                            </thead>
+                            <tbody id="models-table-body">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Excursion Statistics (MFE / MAE / Drawdowns) -->
+                <div class="excursion-charts-grid">
+                    <div class="chart-panel" id="panel-chart-excursion">
+                        <div class="panel-header">
+                            <h3>Max Favorable vs Adverse Excursions (MFE / MAE)</h3>
+                            <span class="panel-subtitle">Upside Potential vs Downside Risk Distribution</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-excursion-distribution"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-panel" id="panel-chart-model-returns">
+                        <div class="panel-header">
+                            <h3>Comparative Forward Return by Model</h3>
+                            <span class="panel-subtitle">Mean Return % Comparison Across Models A–F</span>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-model-returns"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Frozen Historical Observations Table -->
+                <div class="sub-table-panel" id="panel-historical-obs">
+                    <div class="panel-header">
+                        <h3>Frozen Historical Observations Log (Zero Look-Ahead)</h3>
+                        <span class="panel-subtitle">Each observation timestamp T captures state known only at T, paired with subsequent realized forward returns</span>
+                    </div>
+                    <div class="table-container small-table">
+                        <table class="data-table" id="table-observations-log">
+                            <thead>
+                                <tr>
+                                    <th>Obs Timestamp (T)</th>
+                                    <th>Token</th>
+                                    <th>Price at T</th>
+                                    <th>Prior 24h Chg</th>
+                                    <th>Existing Accum ($)</th>
+                                    <th>Persistent Acc</th>
+                                    <th>Pressure</th>
+                                    <th>Setup at T</th>
+                                    <th>Fwd +24h Ret</th>
+                                    <th>Fwd +7d Ret</th>
+                                    <th>MFE %</th>
+                                    <th>MAE %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-observations-log"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: LIVE ONGOING ALPHA TRACKER -->
+            <section class="tab-view" id="tab-tracker">
+                <div class="view-header">
+                    <div class="view-title-block">
+                        <h2>Ongoing Predictive Signal Tracker & Statistical Scorecard</h2>
+                        <p class="view-desc">Live forward tracking daemon capturing frozen observations at timestamp T and locking in out-of-sample forward returns as price paths mature.</p>
+                    </div>
+                    <div class="filter-bar">
+                        <button class="btn btn-primary" id="btn-tracker-snapshot" title="Freeze Current State at Timestamp T">
+                            📸 Snapshot Now
+                        </button>
+                        <button class="btn btn-secondary" id="btn-tracker-resolve" title="Check & Lock Milestone Returns">
+                            ⚡ Check Milestones
+                        </button>
+                        <button class="btn btn-secondary" id="btn-tracker-simulate" title="Simulate Forward Clock by 6 Hours for Immediate Testing">
+                            ⏩ Advance Clock (+6h)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Daemon Status Strip -->
+                <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;" id="tracker-kpi-grid">
+                    <div class="kpi-card highlight-bull">
+                        <span class="kpi-title">Daemon Polling Status</span>
+                        <span class="kpi-value text-bull" id="tracker-daemon-status" style="font-size:1.25rem;">ACTIVE (5m)</span>
+                        <span class="kpi-sub" id="tracker-last-run">Last run: Just now</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Active Signals Pending</span>
+                        <span class="kpi-value text-accent" id="tracker-pending-count">12</span>
+                        <span class="kpi-sub">Tracking forward realizations</span>
+                    </div>
+                    <div class="kpi-card highlight-neutral">
+                        <span class="kpi-title">Total Observations</span>
+                        <span class="kpi-value" id="tracker-total-obs">132</span>
+                        <span class="kpi-sub">Empirical out-of-sample database</span>
+                    </div>
+                    <div class="kpi-card highlight-bull">
+                        <span class="kpi-title">Outperformance vs Base</span>
+                        <span class="kpi-value text-bull" id="tracker-outperf-val">+0.64%</span>
+                        <span class="kpi-sub" id="tracker-p-val">p-value: 0.582 (Testing H₀)</span>
+                    </div>
+                </div>
+
+                <!-- Empirical Hypothesis Scorecard Banner -->
+                <div class="verdict-banner" id="tracker-scorecard-banner" style="margin-bottom:20px;">
+                    <div class="verdict-icon">📊</div>
+                    <div class="verdict-content">
+                        <h3 id="tracker-verdict-title">EMPIRICAL OUT-OF-SAMPLE EVALUATION</h3>
+                        <p id="tracker-verdict-text">Calculating rolling empirical hypothesis tests...</p>
+                    </div>
+                </div>
+
+                <!-- Comparative Models Realized Metrics -->
+                <div class="models-comparison-panel">
+                    <div class="panel-header">
+                        <h3>Out-of-Sample Performance by Signal Model</h3>
+                        <span class="panel-subtitle">Compares real forward performance of tokens flagged with Persistent Accumulation vs Price Momentum and Sybil Clusters</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="tracker-scorecard-table">
+                            <thead>
+                                <tr>
+                                    <th>Model Group</th>
+                                    <th>Signals Tested</th>
+                                    <th>Win Rate %</th>
+                                    <th>Mean Forward Return %</th>
+                                    <th>Sharpe Ratio</th>
+                                    <th>Avg Upside (MFE %)</th>
+                                    <th>Avg Drawdown (MAE %)</th>
+                                    <th>Asymmetry (Risk/Reward)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tracker-scorecard-tbody">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Active Observations Watchlist -->
+                <div class="sub-table-panel" style="margin-top: 24px;">
+                    <div class="panel-header">
+                        <h3>Active Forward Watchlist (Currently In Progress)</h3>
+                        <span class="panel-subtitle">Signals frozen at timestamp T with live unrealized PnL and milestone realization countdown</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="table-active-signals">
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th>Observation Time (T)</th>
+                                    <th>Price at T</th>
+                                    <th>Setup Flag</th>
+                                    <th>Persistent Acc</th>
+                                    <th>Cluster-Adj</th>
+                                    <th>Live Current Price</th>
+                                    <th>Unrealized Ret %</th>
+                                    <th>Peak (MFE %)</th>
+                                    <th>Trough (MAE %)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-active-signals">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Config / Thresholds Modal -->
+        <div class="modal-backdrop" id="config-modal-backdrop" style="display: none;">
+            <div class="modal-dialog" id="config-modal">
+                <div class="modal-header">
+                    <h3>Research Rules & Threshold Configuration</h3>
+                    <button class="modal-close-btn" id="btn-close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Screener Filters Section -->
+                    <div class="config-section">
+                        <h4>1. Micro-Cap Universe Screening Filters</h4>
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="cfg-min-mcap">Min Market Cap ($):</label>
+                                <input type="number" id="cfg-min-mcap" class="form-input" value="25000">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-max-mcap">Max Market Cap ($):</label>
+                                <input type="number" id="cfg-max-mcap" class="form-input" value="25000000">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-min-liq">Min Liquidity ($):</label>
+                                <input type="number" id="cfg-min-liq" class="form-input" value="10000">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-min-vol">Min 24h Volume ($):</label>
+                                <input type="number" id="cfg-min-vol" class="form-input" value="15000">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-min-holders">Min Holders:</label>
+                                <input type="number" id="cfg-min-holders" class="form-input" value="80">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Persistent Accumulator Definition -->
+                    <div class="config-section">
+                        <h4>2. Persistent Accumulator Definition Rules</h4>
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="cfg-min-buys">Min Purchases:</label>
+                                <input type="number" id="cfg-min-buys" class="form-input" value="2">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-min-usd">Min Accumulated USD ($):</label>
+                                <input type="number" id="cfg-min-usd" class="form-input" value="100">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-min-pct-inc">Min Balance Increase %:</label>
+                                <input type="number" id="cfg-min-pct-inc" class="form-input" value="15">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-max-sold-pct">Max Allowed Subsequently Sold %:</label>
+                                <input type="number" id="cfg-max-sold-pct" class="form-input" value="20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scoring Weights -->
+                    <div class="config-section">
+                        <h4>3. Composite Alpha Scoring Weights</h4>
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="cfg-w-exist">Existing Holder Accumulation Weight:</label>
+                                <input type="number" step="0.05" id="cfg-w-exist" class="form-input" value="0.25">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-w-persist">Persistent Count Weight:</label>
+                                <input type="number" step="0.05" id="cfg-w-persist" class="form-input" value="0.20">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-w-repeat">Repeat Buyers Weight:</label>
+                                <input type="number" step="0.05" id="cfg-w-repeat" class="form-input" value="0.15">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-w-vol">Accumulation / Volume Weight:</label>
+                                <input type="number" step="0.05" id="cfg-w-vol" class="form-input" value="0.10">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-w-supply">Accumulation / Supply Weight:</label>
+                                <input type="number" step="0.05" id="cfg-w-supply" class="form-input" value="0.10">
+                            </div>
+                            <div class="form-field">
+                                <label for="cfg-w-retention">Cohort Retention Weight:</label>
+                                <input type="number" step="0.05" id="cfg-w-retention" class="form-input" value="0.10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="btn-cancel-config">Cancel</button>
+                    <button class="btn btn-primary" id="btn-save-config">Apply Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Drilldown Modal -->
+        <div class="modal-backdrop" id="wallet-modal-backdrop" style="display: none;">
+            <div class="modal-dialog" id="wallet-modal">
+                <div class="modal-header">
+                    <h3>Wallet Behavioral Profile</h3>
+                    <button class="modal-close-btn" id="btn-close-wallet-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="wallet-modal-body">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/charts.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

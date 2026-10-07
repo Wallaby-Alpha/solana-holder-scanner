@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  solana-tracker:
+    build: .
+    container_name: solana-alpha-tracker
+    restart: always
+    ports:
+      - "80:8080"      # Binds directly to port 80 for easy access (http://<your-droplet-ip>)
+      - "8080:8080"    # Also available on port 8080
+    volumes:
+      # Persistent SQLite database storage on Droplet host
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
