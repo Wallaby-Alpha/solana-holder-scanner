@@ -9,13 +9,18 @@ echo "=========================================================="
 
 APP_DIR="/opt/solana-holder-scanner"
 
-# Check if Docker is installed
-if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; then
+# Check if Docker and Docker Compose plugin/cli are installed
+if command -v docker &> /dev/null && (docker compose version &> /dev/null || command -v docker-compose &> /dev/null); then
     echo "[Deploy] Using Docker Compose..."
     mkdir -p "$APP_DIR/data"
     cd "$APP_DIR"
-    docker compose down || true
-    docker compose up -d --build
+    if docker compose version &> /dev/null; then
+        docker compose down || true
+        docker compose up -d --build
+    else
+        docker-compose down || true
+        docker-compose up -d --build
+    fi
     echo "=========================================================="
     echo " SUCCESS: Docker container is running 24/7!"
     echo " Check status with: docker compose ps"
