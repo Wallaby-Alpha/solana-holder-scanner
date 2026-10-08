@@ -159,13 +159,14 @@ if menu == "📊 Alpha Scorecard & Hypothesis Test":
         st.warning("No observations collected yet. Run a snapshot to start collecting data.")
     else:
         total_obs = len(obs_df)
-        high_accum = obs_df[obs_df["persistent_accumulators_count"] >= 3]
-        dip_accum = obs_df[(obs_df["price_change_prior"] <= 0) & (obs_df["persistent_accumulators_count"] >= 2)]
-        
-        # Calculate returns
+
+        # Calculate returns FIRST before slicing sub-models
         obs_df["eval_return"] = obs_df["fwd_ret_24h"].fillna(obs_df["current_unrealized_return"]).fillna(0.0)
         baseline_ret = obs_df["eval_return"].mean()
         baseline_win = (obs_df["eval_return"] > 0).mean() * 100.0
+
+        high_accum = obs_df[obs_df["persistent_accumulators_count"] >= 3]
+        dip_accum = obs_df[(obs_df["price_change_prior"] <= 0) & (obs_df["persistent_accumulators_count"] >= 2)]
 
         high_ret = high_accum["eval_return"].mean() if not high_accum.empty else 0.0
         high_win = ((high_accum["eval_return"] > 0).mean() * 100.0) if not high_accum.empty else 0.0
