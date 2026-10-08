@@ -45,18 +45,25 @@ else
     ./venv/bin/pip install --upgrade pip
     ./venv/bin/pip install -r requirements.txt
 
-    # Install systemd service
-    echo "[Deploy] Installing solana-tracker.service..."
+    # Install systemd services
+    echo "[Deploy] Installing solana-tracker.service & solana-streamlit.service..."
     cp solana-tracker.service /etc/systemd/system/solana-tracker.service
+    cp solana-streamlit.service /etc/systemd/system/solana-streamlit.service
     systemctl daemon-reload
-    systemctl enable solana-tracker
-    systemctl restart solana-tracker
+    systemctl enable solana-tracker solana-streamlit
+    systemctl restart solana-tracker solana-streamlit
 
     echo "=========================================================="
-    echo " SUCCESS: Systemd service is running 24/7!"
-    echo " Check status with: systemctl status solana-tracker"
-    echo " View logs with:    journalctl -u solana-tracker -f"
+    echo " SUCCESS: Services are running 24/7!"
+    echo " Check backend status:   systemctl status solana-tracker"
+    echo " Check streamlit status: systemctl status solana-streamlit"
+    echo " View backend logs:      journalctl -u solana-tracker -f"
+    echo " View streamlit logs:    journalctl -u solana-streamlit -f"
     echo "=========================================================="
 fi
 
-echo "Access the dashboard at: http://$(curl -s ifconfig.me)"
+MY_IP=$(curl -s ifconfig.me || echo "your-droplet-ip")
+echo ""
+echo "🚀 Web Dashboard:       http://${MY_IP}"
+echo "⚡ Streamlit Dashboard: http://${MY_IP}:8501"
+echo ""
