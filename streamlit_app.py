@@ -44,16 +44,6 @@ st.markdown("""
         font-weight: 700;
         font-family: 'Courier New', monospace;
     }
-    .stat-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-    .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
-    .badge-amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
-    .badge-cyan  { background: rgba(6, 182, 212, 0.2); color: #06b6d4; border: 1px solid #06b6d4; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -63,7 +53,6 @@ API_BASE = "http://127.0.0.1:80"
 
 def get_db_connection():
     if not os.path.exists(DB_PATH):
-        # Check alternate local port 8080 fallback
         alt_path = os.path.join(os.getcwd(), "data", "scanner.db")
         if os.path.exists(alt_path):
             return sqlite3.connect(alt_path)
@@ -94,7 +83,6 @@ try:
         else:
             daemon_status = "🟡 Daemon Stopped"
 except Exception:
-    # Try port 8080 fallback
     try:
         resp = requests.get("http://127.0.0.1:8080/api/tracker/status", timeout=2)
         if resp.status_code == 200:
@@ -165,7 +153,7 @@ if menu == "📊 Alpha Scorecard & Hypothesis Test":
     except Exception:
         pass
 
-    obs_df = query_db("SELECT * FROM forward_observations")
+    obs_df = query_db("SELECT * FROM backtest_observations")
     
     if obs_df.empty:
         st.warning("No observations collected yet. Run a snapshot to start collecting data.")
@@ -260,26 +248,26 @@ elif menu == "📡 Live In-Flight Forward Tracker":
 
     obs_df = query_db("""
         SELECT 
-            fo.id,
+            bo.id,
             t.symbol,
             t.name,
-            fo.observation_time,
-            fo.status,
-            fo.setup_classification,
-            fo.price_at_t,
-            fo.latest_observed_price,
-            fo.current_unrealized_return,
-            fo.fwd_ret_1h,
-            fo.fwd_ret_6h,
-            fo.fwd_ret_24h,
-            fo.fwd_ret_7d,
-            fo.mfe_pct,
-            fo.mae_pct,
-            fo.persistent_accumulators_count,
-            fo.cluster_adjusted_accumulators_count
-        FROM forward_observations fo
-        JOIN tokens t ON fo.mint_address = t.mint_address
-        ORDER BY fo.observation_time DESC
+            bo.observation_time,
+            bo.status,
+            bo.setup_classification,
+            bo.price_at_t,
+            bo.latest_observed_price,
+            bo.current_unrealized_return,
+            bo.fwd_ret_1h,
+            bo.fwd_ret_6h,
+            bo.fwd_ret_24h,
+            bo.fwd_ret_7d,
+            bo.mfe_pct,
+            bo.mae_pct,
+            bo.persistent_accumulators_count,
+            bo.cluster_adjusted_accumulators_count
+        FROM backtest_observations bo
+        JOIN tokens t ON bo.mint_address = t.mint_address
+        ORDER BY bo.observation_time DESC
     """)
 
     if obs_df.empty:
@@ -324,10 +312,10 @@ elif menu == "🎯 Excursion Lab (MFE / MAE / Drawdown)":
 
     obs_df = query_db("""
         SELECT 
-            fo.*,
+            bo.*,
             t.symbol
-        FROM forward_observations fo
-        JOIN tokens t ON fo.mint_address = t.mint_address
+        FROM backtest_observations bo
+        JOIN tokens t ON bo.mint_address = t.mint_address
     """)
 
     if not obs_df.empty:
@@ -387,11 +375,18 @@ elif menu == "🔍 Token Screener & Cohort Deep Dive":
             fig_p.update_layout(template="plotly_dark")
             st.plotly_chart(fig_p, use_container_width=True)
 
-        # Holder Cohorts
+        # Holder Cohorts (from cohort_metrics)
         st.subheader("👥 Retention & Cohort Dynamics")
-        cohorts = query_db("SELECT * FROM holder_cohorts WHERE mint_address = ?", (mint,))
+        cohorts = query_db("""
+            SELECT cohort_bracket, wallet_count, retention_rate, net_accum_usd, net_distrib_usd, avg_position_change_pct 
+            FROM cohort_metrics 
+            WHERE mint_address = ?
+            ORDER BY id DESC LIMIT 10
+        """, (mint,))
         if not cohorts.empty:
             st.dataframe(cohorts, use_container_width=True)
+        else:
+            st.info("No cohort records available for this token yet.")
 
 
 # -------------------------------------------------------------
@@ -405,20 +400,22 @@ elif menu == "👥 Accumulator Leaderboard & Sybil Clusters":
     
     query = """
         SELECT 
-            wb.wallet_address,
+            wtb.wallet_address,
             t.symbol,
-            wb.balance,
-            wb.cluster_id,
-            wb.is_deployer,
-            wb.is_liquidity_pool
-        FROM wallet_balances wb
-        JOIN tokens t ON wb.mint_address = t.mint_address
-        WHERE wb.is_liquidity_pool = 0 AND wb.is_burn_address = 0
+            wtb.balance,
+            wcm.cluster_id,
+            w.is_excluded,
+            w.classification_reason
+        FROM wallet_token_balances wtb
+        JOIN tokens t ON wtb.mint_address = t.mint_address
+        LEFT JOIN wallets w ON wtb.wallet_address = w.address
+        LEFT JOIN wallet_cluster_members wcm ON wtb.wallet_address = wcm.wallet_address
+        WHERE (w.is_excluded IS NULL OR w.is_excluded = 0)
     """
     if exclude_sybil:
-        query += " AND wb.cluster_id IS NULL"
+        query += " AND wcm.cluster_id IS NULL"
 
-    query += " ORDER BY wb.balance DESC LIMIT 50"
+    query += " ORDER BY wtb.balance DESC LIMIT 50"
     wallets_df = query_db(query)
     
     if not wallets_df.empty:
