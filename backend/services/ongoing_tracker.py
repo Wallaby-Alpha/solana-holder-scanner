@@ -365,18 +365,27 @@ class OngoingTracker:
     async def run_single_cycle(self):
         """Executes a single capture and maturation pass."""
         t0 = time.time()
+        counts = self.db.get_tracker_counts()
+        new_created = 0
+
+        # Autonomous Snapshot Trigger:
+        # If no observations are currently in-flight, capture an initial snapshot of all screened tokens
+        if counts["pending"] == 0 and counts["maturing"] == 0:
+            created_ids = await self.capture_live_observations_snapshot()
+            new_created = len(created_ids)
+
         matured_updated = await self.update_maturing_observations()
         tokens = self.db.get_all_tokens()
         
         # Log run
         duration = int((time.time() - t0) * 1000)
-        counts = self.db.get_tracker_counts()
+        current_counts = self.db.get_tracker_counts()
         self.db.record_tracker_run({
             "run_timestamp": datetime.now(timezone.utc).isoformat(),
             "tokens_evaluated": len(tokens),
-            "new_observations_created": 0,
+            "new_observations_created": new_created,
             "matured_observations_updated": matured_updated,
-            "active_tracking_count": counts["pending"] + counts["maturing"],
+            "active_tracking_count": current_counts["pending"] + current_counts["maturing"],
             "duration_ms": duration
         })
         self.last_run_timestamp = datetime.now(timezone.utc).isoformat()
